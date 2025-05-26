@@ -1,0 +1,34 @@
+server:
+  port: 8089
+
+spring:
+  application:
+    name: exam-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/exam_db
+    username: root
+    password: ashu
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    exchange: exam-exchange
+    queue: exam-queue
+    routingkey: exam.routing.key
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true

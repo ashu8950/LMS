@@ -1,0 +1,57 @@
+package com.schedule_service.service.impl;
+
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+
+import com.schedule_service.dto.ScheduleDTO;
+import com.schedule_service.entity.Schedule;
+import com.schedule_service.repository.ScheduleRepository;
+import com.schedule_service.service.ScheduleService;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class ScheduleServiceImpl implements ScheduleService {
+
+    private final ScheduleRepository repository;
+
+    @Override
+    public ScheduleDTO createSchedule(ScheduleDTO dto) {
+        Schedule schedule = new Schedule();
+        BeanUtils.copyProperties(dto, schedule);
+        return toDTO(repository.save(schedule));
+    }
+
+    @Override
+    public List<ScheduleDTO> getSchedulesByCourse(Long courseId) {
+        return repository.findByCourseId(courseId)
+                .stream().map(this::toDTO).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ScheduleDTO> getSchedulesByBatch(Long batchId) {
+        return repository.findByBatchId(batchId)
+                .stream().map(this::toDTO).collect(Collectors.toList());
+    }
+
+    @Override
+    public ScheduleDTO getScheduleById(Long id) {
+        return toDTO(repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Schedule not found with ID: " + id)));
+    }
+
+    @Override
+    public void deleteSchedule(Long id) {
+        repository.deleteById(id);
+    }
+
+    private ScheduleDTO toDTO(Schedule schedule) {
+        ScheduleDTO dto = new ScheduleDTO();
+        BeanUtils.copyProperties(schedule, dto);
+        return dto;
+    }
+}

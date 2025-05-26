@@ -1,0 +1,114 @@
+package com.auth_service.service;
+
+import com.auth_service.dto.RegisterRequest;
+import com.auth_service.dto.AuthResponse;
+import com.auth_service.entity.User;
+import com.auth_service.repository.UserRepository;
+import com.auth_service.config.JwtTokenProvider;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class AuthService {
+
+    private final OtpService otpService;
+    private final RabbitMQSender rabbitMQSender;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final AuthenticationManager authenticationManager;
+    private final TokenService tokenService;  // Inject tokenService
+    private static final SecureRandom secureRandom = new SecureRandom();
+
+    private String generateOtp() {
+        int otp = secureRandom.nextInt(900_000) + 100_000;
+        return String.valueOf(otp);
+    }
+
+    // OTP generation and temporary info save
+    public void generateOtpAndSaveRegistration(RegisterRequest req) {
+        if (userRepository.existsByEmail(req.getEmail())) {
+            throw new IllegalStateException("User already exists");
+        }
+        String otp = generateOtp();
+        otpService.saveOtp(req.getEmail(), otp);
+        otpService.saveRegistrationData(req.getEmail(), req);
+        rabbitMQSender.sendOtpMessage(req.getEmail(), otp);
+    }
+
+    // Verify OTP only, find email by OTP, then register user
+    public AuthResponse verifyOtpAndRegister(String otp) {
+
+        if (otp == null || otp.isEmpty()) {
+            throw new IllegalArgumentException("OTP must not be null or empty");
+        }
+
+        // Get email by OTP from Redis
+        String email = otpService.getEmailByOtp(otp);
+        log.info("Verifying OTP. Email found: {}", email);
+
+        if (email == null) {
+            throw new IllegalArgumentException("Invalid or expired OTP");
+        }
+
+        // Clear OTP and registration data from Redis
+        otpService.deleteOtp(otp);
+
+        RegisterRequest savedReq = otpService.getRegistrationData(email);
+        if (savedReq == null) {
+            throw new IllegalStateException("No pending registration for " + email);
+        }
+        otpService.deleteRegistrationData(email);
+
+        if (userRepository.existsByEmail(email)) {
+            throw new IllegalStateException("User already exists");
+        }
+
+        // Create and save user
+        User user = new User();
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(savedReq.getPassword()));
+        user.setRole(savedReq.getRole());
+        user.setUsername(savedReq.getUserName());
+        user.setEnabled(true);
+        userRepository.save(user);
+
+        // Authenticate and generate tokens
+        Authentication auth = authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(email, savedReq.getPassword())
+        );
+        UserDetails ud = (UserDetails) auth.getPrincipal();
+
+        String accessToken  = jwtTokenProvider.generateToken(ud);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(ud);
+
+        // Revoke existing tokens for user
+        tokenService.revokeAllUserTokens(user);
+
+        // Save new tokens with expiry time
+        tokenService.saveUserToken(user, accessToken, "ACCESS", jwtTokenProvider.getExpiration(accessToken));
+        tokenService.saveUserToken(user, refreshToken, "REFRESH", jwtTokenProvider.getExpiration(refreshToken));
+
+        // Send welcome message via RabbitMQ
+        rabbitMQSender.sendWelcomeMessage(email, savedReq.getUserName());
+
+        return new AuthResponse(
+            accessToken,
+            refreshToken,
+            user.getRole(),
+            email,
+            user.getId()
+        );
+    }
+}

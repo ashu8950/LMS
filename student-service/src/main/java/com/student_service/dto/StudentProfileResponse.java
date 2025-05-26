@@ -1,0 +1,21 @@
+package com.student_service.dto;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class StudentProfileResponse {
+    private Long studentId;
+    private String studentCode;
+    private String status;
+    private LocalDate joinedDate;
+
+    private List<EnrollmentResponse> enrollments;
+}
+

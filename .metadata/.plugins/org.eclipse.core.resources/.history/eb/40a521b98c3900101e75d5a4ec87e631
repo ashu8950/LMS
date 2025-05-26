@@ -1,0 +1,45 @@
+package com.notification_service.service.impl;
+
+package com.lms.notification.service.impl;
+
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.stereotype.Service;
+
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class NotificationServiceImpl implements NotificationService {
+
+    private final JavaMailSender mailSender;
+
+    @Override
+    public void sendHtmlEmail(NotificationRequest req) {
+        try {
+            MimeMessage msg = mailSender.createMimeMessage();
+            MimeMessageHelper h = new MimeMessageHelper(msg, "UTF-8");
+            h.setTo(req.getTo());
+            h.setSubject(req.getSubject());
+            h.setText(req.getBody(), true);
+            mailSender.send(msg);
+        } catch (MessagingException e) {
+            // log error
+        }
+    }
+
+    // Listen for schedule.new events
+    @RabbitListener(queues = RabbitConfig.SCHEDULE_QUEUE)
+    public void handleScheduleEvent(Object scheduleEvent) {
+        // extract email recipients based on batch, then:
+        NotificationRequest req = ...; 
+        sendHtmlEmail(req);
+    }
+
+    // similarly listen for other topics: feedback.submitted, payment.success, etc.
+}

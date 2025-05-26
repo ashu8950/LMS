@@ -1,0 +1,61 @@
+package com.batch_service.service.impl;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import com.batch_service.dto.BatchDTO;
+import com.batch_service.entity.Batch;
+import com.batch_service.mapper.BatchMapper;
+import com.batch_service.repository.BatchRepository;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@Slf4j
+public class BatchService {
+
+    private final BatchRepository batchRepository;
+    private final BatchMapper batchMapper;
+    private final RabbitTemplate rabbitTemplate;
+
+    @Value("${spring.rabbitmq.exchange}")
+    private String exchange;
+
+    @Value("${spring.rabbitmq.routingkey}")
+    private String routingKey;
+
+    public BatchService(BatchRepository batchRepository, BatchMapper batchMapper, RabbitTemplate rabbitTemplate) {
+        this.batchRepository = batchRepository;
+        this.batchMapper = batchMapper;
+        this.rabbitTemplate = rabbitTemplate;
+    }
+
+    public BatchDTO createBatch(BatchDTO batchDTO) {
+        Batch batch = batchMapper.toEntity(batchDTO);
+        Batch savedBatch = batchRepository.save(batch);
+
+        BatchDTO savedDTO = batchMapper.toDTO(savedBatch);
+
+        // Publish batch info to RabbitMQ
+        rabbitTemplate.convertAndSend(exchange, routingKey, savedDTO);
+        log.info("Batch message sent to RabbitMQ: {}", savedDTO);
+
+        return savedDTO;
+    }
+
+    public List<BatchDTO> getAllBatches() {
+        return batchRepository.findAll()
+                .stream()
+                .map(batchMapper::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    public BatchDTO getBatchById(Long id) {
+        Batch batch = batchRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Batch not found: " + id));
+        return batchMapper.toDTO(batch);
+    }
+}

@@ -1,0 +1,7 @@
+package com.example.reporting.dto;
+public class BatchDto {
+    private Long id;
+    private String name;
+    private String courseName;
+    // getters/setters
+}

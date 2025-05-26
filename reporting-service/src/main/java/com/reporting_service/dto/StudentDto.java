@@ -1,0 +1,7 @@
+package com.reporting_service.dto;
+
+public class StudentDto {
+    private Long id;
+    private String name;
+    // getters/setters
+}

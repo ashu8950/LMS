@@ -1,0 +1,5 @@
+package com.student_service.repository;
+
+public class StudentRepository {
+
+}

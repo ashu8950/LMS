@@ -1,0 +1,18 @@
+package com.student_service.messaging;
+
+@Component
+@RequiredArgsConstructor
+public class FeedbackPublisher {
+    private final AmqpTemplate template;
+
+    @Value("${rabbitmq.exchange}")
+    private String exchange;
+
+    @Value("${rabbitmq.routingkey.feedback}")
+    private String routingKey;
+
+    public void publishFeedbackEvent(FeedbackDto feedback) {
+        template.convertAndSend(exchange, routingKey, feedback);
+    }
+}
+

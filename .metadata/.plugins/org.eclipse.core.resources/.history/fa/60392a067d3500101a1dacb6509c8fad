@@ -1,0 +1,38 @@
+package com.auth_service.service;
+
+import java.time.Duration;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+public class OtpService {
+	
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    private static final String OTP_PREFIX = "otp:";
+
+    public void saveOtp(String email, String otp) {
+        if (email != null && otp != null) {
+            redisTemplate.opsForValue().set(generateKey(email), otp, Duration.ofMinutes(5));
+        }
+    }
+
+    public String getOtp(String email) {
+        if (email == null) return null;
+        Object otp = redisTemplate.opsForValue().get(generateKey(email));
+        return otp != null ? otp.toString() : null;
+    }
+
+    public void deleteOtp(String email) {
+        if (email != null) {
+            redisTemplate.delete(generateKey(email));
+        }
+    }
+
+    private String generateKey(String email) {
+        return OTP_PREFIX + email.toLowerCase().trim();
+    }
+}

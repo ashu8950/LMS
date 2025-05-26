@@ -1,0 +1,29 @@
+package com.auth_service.service;
+
+import java.time.Duration;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+
+@Service
+public class OtpService {
+
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+
+    private static final String OTP_PREFIX = "otp:";
+
+    public void saveOtp(String email, String otp) {
+        redisTemplate.opsForValue().set(OTP_PREFIX + email, otp, Duration.ofMinutes(5));  // expire in 5 min
+    }
+
+    public String getOtp(String email) {
+        Object otp = redisTemplate.opsForValue().get(OTP_PREFIX + email);
+        return otp != null ? otp.toString() : null;
+    }
+
+    public void deleteOtp(String email) {
+        redisTemplate.delete(OTP_PREFIX + email);
+    }
+}

@@ -1,0 +1,3 @@
+public class InstructorAssignmentDto {
+    private Long instructorId;
+}

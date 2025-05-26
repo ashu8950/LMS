@@ -1,0 +1,41 @@
+package com.auth_service.entity;
+
+import java.util.List;
+
+import com.auth_service.enums.Role;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+@Entity
+@Table(name = "users")
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class User {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    
+    @Column(unique = true, nullable = false)
+    private String username;
+
+    @Column(unique = true, nullable = false)
+    private String email;
+
+    @Column(nullable = false)
+    private String password;
+
+    // Use Enum for role instead of String
+    @Enumerated(EnumType.STRING)
+    private Role role;
+
+    // For enabling/disabling the user
+    private boolean enabled = false;
+
+    // User's tokens (e.g. JWT tokens, refresh tokens)
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Token> tokens;
+}

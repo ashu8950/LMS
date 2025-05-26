@@ -1,0 +1,74 @@
+package com.user_service.mapper;
+
+import com.user_service.dto.AuthUserDTO;
+import com.user_service.dto.UserProfileDTO;
+import com.user_service.entity.UserProfile;
+
+public class UserProfileMapper {
+
+    // Converts Entity + AuthUserDTO to DTO, merging external data
+    public static UserProfileDTO toDTO(UserProfile profile, AuthUserDTO authUser) {
+        if (profile == null) return null;
+        if (authUser == null) {
+            // fallback to profile fields only
+            return UserProfileDTO.builder()
+                    .userId(profile.getAuthUserId())
+                    .email(profile.getEmail())
+                    .username(profile.getUsername())
+                    .role(profile.getRole())
+                    .enabled(profile.getEnabled())
+                    .firstName(profile.getFirstName())
+                    .lastName(profile.getLastName())
+                    .phoneNumber(profile.getPhoneNumber())
+                    .bio(profile.getBio())
+                    .profileImageUrl(profile.getProfileImageUrl())
+                    .build();
+        }
+        return UserProfileDTO.builder()
+                .userId(authUser.getId())
+                .email(authUser.getEmail())
+                .username(authUser.getUsername())
+                .role(authUser.getRole())
+                .enabled(authUser.getEnabled())
+                .firstName(profile.getFirstName())
+                .lastName(profile.getLastName())
+                .phoneNumber(profile.getPhoneNumber())
+                .bio(profile.getBio())
+                .profileImageUrl(profile.getProfileImageUrl())
+                .build();
+    }
+
+    // Converts DTO + AuthUserDTO to Entity (for create/update)
+    public static UserProfile toEntity(UserProfileDTO dto, AuthUserDTO authUser) {
+        if (dto == null || authUser == null) return null;
+        return UserProfile.builder()
+                .authUserId(authUser.getId())
+                .email(authUser.getEmail())
+                .username(authUser.getUsername())
+                .role(authUser.getRole())
+                .enabled(authUser.getEnabled())
+                .firstName(dto.getFirstName())
+                .lastName(dto.getLastName())
+                .phoneNumber(dto.getPhoneNumber())
+                .bio(dto.getBio())
+                .profileImageUrl(dto.getProfileImageUrl())
+                .build();
+    }
+
+    // Update existing entity with DTO and AuthUserDTO data
+    public static void updateEntity(UserProfile existing, UserProfileDTO dto, AuthUserDTO authUser) {
+        if (existing == null || dto == null || authUser == null) return;
+
+        existing.setAuthUserId(authUser.getId());
+        existing.setEmail(authUser.getEmail());
+        existing.setUsername(authUser.getUsername());
+        existing.setRole(authUser.getRole());
+        existing.setEnabled(authUser.getEnabled());
+
+        existing.setFirstName(dto.getFirstName());
+        existing.setLastName(dto.getLastName());
+        existing.setPhoneNumber(dto.getPhoneNumber());
+        existing.setBio(dto.getBio());
+        existing.setProfileImageUrl(dto.getProfileImageUrl());
+    }
+}

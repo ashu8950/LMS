@@ -1,0 +1,60 @@
+package com.gateway_service.config;
+
+import io.jsonwebtoken.Claims;
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.authentication.ReactiveAuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.web.server.authentication.AuthenticationWebFilter;
+import org.springframework.security.web.server.context.NoOpServerSecurityContextRepository;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Component
+public class JwtAuthenticationFilter extends AuthenticationWebFilter {
+
+    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
+        // Pass a ReactiveAuthenticationManager that just returns the Authentication
+        super(new JwtReactiveAuthenticationManager());
+
+        setServerAuthenticationConverter(exchange -> {
+            String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return Mono.empty();
+            }
+
+            String token = authHeader.substring(7);
+
+            if (!jwtUtil.validateToken(token)) {
+                return Mono.empty();
+            }
+
+            Claims claims = jwtUtil.getAllClaimsFromToken(token);
+            String username = claims.getSubject();
+            List<String> roles = claims.get("roles", List.class);
+
+            return Mono.just(new UsernamePasswordAuthenticationToken(
+                    username,
+                    token,
+                    roles.stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList())
+            ));
+        });
+
+        // Disable saving SecurityContext because we are stateless
+        setSecurityContextRepository(NoOpServerSecurityContextRepository.getInstance());
+    }
+
+    // Simple ReactiveAuthenticationManager implementation
+    private static class JwtReactiveAuthenticationManager implements ReactiveAuthenticationManager {
+        @Override
+        public Mono<org.springframework.security.core.Authentication> authenticate(org.springframework.security.core.Authentication authentication) {
+            // Just mark the authentication as authenticated and return it
+            authentication.setAuthenticated(true);
+            return Mono.just(authentication);
+        }
+    }
+}

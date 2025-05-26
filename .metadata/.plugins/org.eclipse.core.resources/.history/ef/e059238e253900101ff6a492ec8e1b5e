@@ -1,0 +1,8 @@
+package com.student_service.service;
+
+public interface StudentService {
+    Student registerStudent(StudentDTO dto);
+    void enrollStudent(Long studentId, EnrollmentRequest req);
+    List<CourseDTO> getEnrolledCourses(Long studentId);
+    void sendFeedback(Long studentId, FeedbackDto feedback);
+}

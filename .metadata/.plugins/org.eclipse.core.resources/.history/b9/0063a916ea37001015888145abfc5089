@@ -1,0 +1,37 @@
+package com.auth_service.config;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
+
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
+import java.util.Base64;
+
+public class RsaKeyGenerator {
+
+    public static void main(String[] args) throws Exception {
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+        generator.initialize(2048);
+        KeyPair pair = generator.generateKeyPair();
+
+        RSAPublicKey publicKey = (RSAPublicKey) pair.getPublic();
+        RSAPrivateKey privateKey = (RSAPrivateKey) pair.getPrivate();
+
+        // Use your helper method to write the files
+        writePemFile("src/main/resources/public.pem", "PUBLIC KEY", publicKey.getEncoded());
+        writePemFile("src/main/resources/private.pem", "PRIVATE KEY", privateKey.getEncoded());
+
+        System.out.println("✅ Keys generated and saved.");
+    }
+
+    private static void writePemFile(String filename, String type, byte[] encoded) throws IOException {
+        String base64 = Base64.getMimeEncoder(64, "\n".getBytes()).encodeToString(encoded);
+        String content = "-----BEGIN " + type + "-----\n" + base64 + "\n-----END " + type + "-----\n";
+
+        try (FileOutputStream fos = new FileOutputStream(filename)) {
+            fos.write(content.getBytes());
+        }
+    }
+}

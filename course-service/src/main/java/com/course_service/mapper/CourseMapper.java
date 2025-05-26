@@ -1,0 +1,27 @@
+package com.course_service.mapper;
+
+
+import org.springframework.stereotype.Component;
+
+import com.course_service.dto.CourseDTO;
+import com.course_service.entity.Course;
+
+@Component
+public class CourseMapper {
+
+    public Course toEntity(CourseDTO dto) {
+        return Course.builder()
+                .id(dto.getId())
+                .title(dto.getTitle())
+                .description(dto.getDescription())
+                .build();
+    }
+
+    public CourseDTO toDTO(Course entity) {
+        return CourseDTO.builder()
+                .id(entity.getId())
+                .title(entity.getTitle())
+                .description(entity.getDescription())
+                .build();
+    }
+}

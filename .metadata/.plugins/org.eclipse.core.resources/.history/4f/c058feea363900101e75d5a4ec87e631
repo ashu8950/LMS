@@ -1,0 +1,13 @@
+package com.schedule_service.service;
+
+import com.scheduleservice.dto.ScheduleDTO;
+
+import java.util.List;
+
+public interface ScheduleService {
+    ScheduleDTO createSchedule(ScheduleDTO dto);
+    List<ScheduleDTO> getSchedulesByCourse(Long courseId);
+    List<ScheduleDTO> getSchedulesByBatch(Long batchId);
+    ScheduleDTO getScheduleById(Long id);
+    void deleteSchedule(Long id);
+}

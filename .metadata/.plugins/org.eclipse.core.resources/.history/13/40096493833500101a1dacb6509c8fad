@@ -1,0 +1,72 @@
+package com.auth_service.service;
+
+import com.auth_service.dto.RegisterRequest;
+import com.auth_service.dto.AuthResponse;
+import com.auth_service.entity.User;
+import com.auth_service.repository.UserRepository;
+import com.auth_service.config.JwtTokenProvider;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import java.security.SecureRandom;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class AuthService {
+
+    private final OtpService otpService;
+    private final RabbitMQSender rabbitMQSender;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final AuthenticationManager authenticationManager;
+    private static final SecureRandom secureRandom = new SecureRandom();
+
+    private String generateOtp() {
+        int otp = secureRandom.nextInt(900_000) + 100_000;
+        return String.valueOf(otp);
+    }
+
+    public void generateAndSendOtp(String email) {
+        String otp = generateOtp();
+        otpService.saveOtp(email, otp);
+        rabbitMQSender.sendOtpMessage(email, otp);
+    }
+
+    public AuthResponse verifyOtpAndRegister(RegisterRequest req) {
+        String cached = otpService.getOtp(req.getEmail());
+        if (cached == null || !cached.equals(req.getOtp())) {
+            throw new IllegalArgumentException("Invalid or expired OTP");
+        }
+        otpService.deleteOtp(req.getEmail());
+
+        if (userRepository.existsByEmail(req.getEmail())) {
+            throw new IllegalStateException("User already exists");
+        }
+
+        User user = new User();
+        user.setEmail(req.getEmail());
+        user.setPassword(passwordEncoder.encode(req.getPassword()));
+        user.setRole(req.getRole());
+        user.setUsername(req.getUserName());
+        user.setEnabled(true);
+        userRepository.save(user);
+
+        Authentication auth = authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword())
+        );
+        UserDetails ud = (UserDetails) auth.getPrincipal();
+
+        String access  = jwtTokenProvider.generateToken(ud);
+        String refresh = jwtTokenProvider.generateRefreshToken(ud);
+        rabbitMQSender.sendWelcomeMessage(user.getEmail());
+
+        return new AuthResponse(access, refresh, user.getRole(), user.getEmail(), user.getId());
+    }
+}

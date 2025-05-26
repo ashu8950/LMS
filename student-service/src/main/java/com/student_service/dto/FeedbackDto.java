@@ -1,0 +1,18 @@
+package com.student_service.dto;
+
+import java.time.LocalDate;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class FeedbackDto {
+    private Long studentId;
+    private String subject;
+    private String message;
+    private LocalDate submittedDate;
+}
+

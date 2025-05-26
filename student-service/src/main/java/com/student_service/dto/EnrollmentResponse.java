@@ -1,0 +1,22 @@
+package com.student_service.dto;
+
+import java.time.LocalDate;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class EnrollmentResponse {
+    private Long enrollmentId;
+    private Long studentId;
+    private Long courseId;
+    private Long batchId;
+    private String courseName;
+    private String batchName;
+    private LocalDate enrollmentDate;
+    private String status; // ACTIVE, COMPLETED, DROPPED
+}
+

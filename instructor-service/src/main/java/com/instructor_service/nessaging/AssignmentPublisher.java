@@ -1,0 +1,26 @@
+package com.instructor_service.nessaging;
+
+
+import lombok.RequiredArgsConstructor;
+
+import org.springframework.amqp.core.AmqpTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import com.instructor_service.dto.AssignmentRequest;
+
+@Component
+@RequiredArgsConstructor
+public class AssignmentPublisher {
+    private final AmqpTemplate template;
+
+    @Value("${rabbitmq.exchange}")
+    private String exchange;
+
+    @Value("${rabbitmq.routingkey.assignment}")
+    private String routingKey;
+
+    public void publishAssignment(AssignmentRequest req) {
+        template.convertAndSend(exchange, routingKey, req);
+    }
+}

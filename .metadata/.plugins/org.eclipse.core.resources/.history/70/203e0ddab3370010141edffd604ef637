@@ -1,0 +1,4 @@
+spring.application.name=users-service
+server.port=8082
+
+debug=true

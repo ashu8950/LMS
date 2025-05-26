@@ -1,0 +1,32 @@
+package com.auth_service.service;
+
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class RabbitMQSender {
+
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    @Autowired
+    private EmailService emailService;
+
+    public void sendOtpMessage(String email, String otp) {
+        // Send to queue (optional)
+        String message = email + ":" + otp;
+        rabbitTemplate.convertAndSend("otp_queue", message);
+
+        // Send OTP email
+        String subject = "Your OTP Code";
+        String body = "Your OTP code is: " + otp;
+        emailService.sendEmail(email, subject, body);
+    }
+
+    public void sendWelcomeMessage(String email) {
+        String subject = "Welcome to Our Platform";
+        String body = "Hi,\n\nThank you for registering!\n\nRegards,\nThe Team";
+        emailService.sendEmail(email, subject, body);
+    }
+}

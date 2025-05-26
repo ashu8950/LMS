@@ -1,0 +1,48 @@
+package com.auth_service.service;
+
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.stereotype.Service;
+
+@Service
+public class EmailService {
+
+    @Autowired
+    private JavaMailSender mailSender;
+
+    public void sendOtpEmail(String toEmail, String otp) {
+        String subject = "Your OTP Code";
+        String body = "<h3>Welcome to LMS</h3>"
+                    + "<p>Your OTP is <strong>" + otp + "</strong></p>";
+
+        sendHtmlEmail(toEmail, subject, body);
+    }
+
+    public void sendWelcomeEmail(String toEmail) {
+        String subject = "Welcome to LMS!";
+        String body = "<h2>Hello,</h2>"
+                    + "<p>Thank you for registering with us. We’re excited to have you onboard!</p>";
+
+        sendHtmlEmail(toEmail, subject, body);
+    }
+
+    private void sendHtmlEmail(String to, String subject, String htmlBody) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlBody, true); // true = HTML
+
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Failed to send email", e);
+        }
+    }
+}
+

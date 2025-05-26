@@ -1,0 +1,5 @@
+package com.auth_service.enums;
+
+public enum Role {
+	STUDENT,ADMIN,INSTRUCTOR,USER
+}

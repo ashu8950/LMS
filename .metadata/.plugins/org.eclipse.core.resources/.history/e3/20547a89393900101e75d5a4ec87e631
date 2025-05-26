@@ -1,0 +1,10 @@
+package com.exam_service.service.impl;
+
+import com.examservice.dto.ExamResultDTO;
+
+import java.util.List;
+
+public interface ExamResultService {
+    ExamResultDTO submitResult(ExamResultDTO dto);
+    List<ExamResultDTO> getResultsByExam(Long examId);
+}

@@ -1,0 +1,21 @@
+package com.student_service.dto;
+
+import java.time.LocalDate;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Getter
+@Setter
+public class StudentDTO {
+    private Long userId;         // Fetched from Auth/User service
+    private String studentCode;  // Generated or provided by admin
+    private String status;       // ACTIVE, INACTIVE, SUSPENDED
+    private LocalDate joinedDate;
+}

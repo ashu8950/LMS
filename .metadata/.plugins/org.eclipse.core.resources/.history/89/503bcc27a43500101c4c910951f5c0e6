@@ -1,0 +1,125 @@
+package com.auth_service.service;
+
+import com.auth_service.dto.RegisterRequest;
+import com.auth_service.dto.AuthRequest;
+import com.auth_service.dto.AuthResponse;
+import com.auth_service.entity.User;
+import com.auth_service.repository.UserRepository;
+import com.auth_service.config.JwtTokenProvider;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.security.SecureRandom;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class AuthService {
+
+    private final OtpService otpService;
+    private final RabbitMQSender rabbitMQSender;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final AuthenticationManager authenticationManager;
+    private final TokenService tokenService;
+
+    private static final SecureRandom secureRandom = new SecureRandom();
+
+    private String generateOtp() {
+        int otp = secureRandom.nextInt(900_000) + 100_000;
+        return String.valueOf(otp);
+    }
+
+    // 1. Registration step 1: Generate & send OTP
+    public void generateOtpAndSaveRegistration(RegisterRequest req) {
+        if (userRepository.existsByEmail(req.getEmail())) {
+            throw new IllegalStateException("User already exists");
+        }
+        String otp = generateOtp();
+        otpService.saveOtp(req.getEmail(), otp);
+        otpService.saveRegistrationData(req.getEmail(), req);
+        rabbitMQSender.sendOtpMessage(req.getEmail(), otp);
+    }
+
+    // 2. Registration step 2: Verify OTP & register user
+    public AuthResponse verifyOtpAndRegister(String otp) {
+        if (otp == null || otp.isEmpty()) {
+            throw new IllegalArgumentException("OTP must not be null or empty");
+        }
+
+        String email = otpService.getEmailByOtp(otp);
+        log.info("Verifying OTP. Email found: {}", email);
+        if (email == null) {
+            throw new IllegalArgumentException("Invalid or expired OTP");
+        }
+
+        otpService.deleteOtp(otp);
+        RegisterRequest savedReq = otpService.getRegistrationData(email);
+        if (savedReq == null) {
+            throw new IllegalStateException("No pending registration for " + email);
+        }
+        otpService.deleteRegistrationData(email);
+
+        if (userRepository.existsByEmail(email)) {
+            throw new IllegalStateException("User already exists");
+        }
+
+        User user = new User();
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(savedReq.getPassword()));
+        user.setRole(savedReq.getRole());
+        user.setUsername(savedReq.getUserName());
+        user.setEnabled(true);
+        userRepository.save(user);
+
+        return authenticateAndBuildResponse(user, savedReq.getUserName());
+    }
+
+    // 3. Login existing user
+    public AuthResponse login(AuthRequest request) {
+        Authentication auth = authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+        );
+
+        User user = userRepository.findByEmail(request.getEmail())
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        return authenticateAndBuildResponse(user, user.getUsername());
+    }
+
+    // Shared: authenticate, revoke old tokens, save new ones, send welcome (if new)
+    private AuthResponse authenticateAndBuildResponse(User user, String displayName) {
+        UserDetails ud = (UserDetails) authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(user.getEmail(), user.getPassword())
+        ).getPrincipal();
+
+        String accessToken  = jwtTokenProvider.generateToken(ud);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(ud);
+
+        // Revoke old tokens and save new ones
+        tokenService.revokeAllUserTokens(user);
+        tokenService.saveUserToken(user, accessToken, "ACCESS",  jwtTokenProvider.getExpiration(accessToken));
+        tokenService.saveUserToken(user, refreshToken, "REFRESH", jwtTokenProvider.getExpiration(refreshToken));
+
+        // Send welcome email only on first registration
+        if (!user.isEnabled()) {
+            rabbitMQSender.sendWelcomeMessage(user.getEmail(), displayName);
+        }
+
+        return new AuthResponse(
+            accessToken,
+            refreshToken,
+            user.getRole(),
+            user.getEmail(),
+            user.getId()
+        );
+    }
+}

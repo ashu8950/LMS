@@ -1,0 +1,30 @@
+package com.auth_service.controllers;
+
+import com.auth_service.dto.*;
+import com.auth_service.service.AuthService;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/auth")
+@RequiredArgsConstructor
+public class AuthController {
+
+    private final AuthService authService;
+
+    // User submits registration data to get OTP
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<Void>> register(@RequestBody RegisterRequest request) {
+        authService.generateOtpAndSaveRegistration(request);
+        return ResponseEntity.ok(new ApiResponse<>(true, "OTP sent to your email", null));
+    }
+    
+    // Step 2: Verify OTP only
+    @PostMapping("/verify-otp")
+    public ResponseEntity<ApiResponse<AuthResponse>> verifyOtp(@RequestBody OtpVerifyRequest request) {
+        AuthResponse authResponse = authService.verifyOtpAndRegister(request.getOtp());
+        return ResponseEntity.ok(new ApiResponse<>(true, "Registration successful", authResponse));
+    }
+}

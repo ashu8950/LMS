@@ -1,0 +1,40 @@
+// service/AttendanceServiceImpl.java
+package com.attendance_service.service.impl;
+
+import com.attendance_service.dto.AttendanceRequest;
+import com.attendance_service.dto.AttendanceResponse;
+import com.attendance_service.entity.Attendance;
+import com.attendance_service.repository.AttendanceRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class AttendanceServiceImpl implements AttendanceService {
+
+    private final AttendanceRepository repository;
+
+    @Override
+    public AttendanceResponse markAttendance(AttendanceRequest request) {
+        Attendance attendance = Attendance.builder()
+                .studentId(request.getStudentId())
+                .courseId(request.getCourseId())
+                .date(request.getDate())
+                .present(request.isPresent())
+                .build();
+        Attendance saved = repository.save(attendance);
+        return new AttendanceResponse(saved.getId(), saved.getStudentId(), saved.getCourseId(), saved.getDate(), saved.isPresent());
+    }
+
+    @Override
+    public List<AttendanceResponse> getAttendanceByStudentAndCourse(Long studentId, Long courseId) {
+        return repository.findByStudentIdAndCourseId(studentId, courseId)
+                .stream()
+                .map(a -> new AttendanceResponse(a.getId(), a.getStudentId(), a.getCourseId(), a.getDate(), a.isPresent()))
+                .collect(Collectors.toList());
+    }
+}
+

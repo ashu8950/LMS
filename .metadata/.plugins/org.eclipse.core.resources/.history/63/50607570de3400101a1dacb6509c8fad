@@ -1,0 +1,17 @@
+package com.auth_service.service;
+
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class RabbitMQSender {
+
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    public void sendOtpMessage(String email, String otp) {
+        String message = email + ":" + otp;  // Simple format, you can use JSON too
+        rabbitTemplate.convertAndSend("otp_queue", message);
+    }
+}

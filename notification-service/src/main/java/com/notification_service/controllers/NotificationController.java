@@ -1,0 +1,24 @@
+package com.notification_service.controllers;
+
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import com.notification_service.dto.NotificationRequest;
+import com.notification_service.service.NotificationService;
+
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequestMapping("/notifications")
+@RequiredArgsConstructor
+public class NotificationController {
+
+    private final NotificationService service;
+
+    @PostMapping("/send")
+    public ResponseEntity<Void> sendEmail(@RequestBody NotificationRequest req) {
+        service.sendHtmlEmail(req);
+        return ResponseEntity.ok().build();
+    }
+}

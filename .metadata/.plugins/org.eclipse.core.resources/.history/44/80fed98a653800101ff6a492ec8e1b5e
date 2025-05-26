@@ -1,0 +1,29 @@
+package com.user_service.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
+import feign.RequestInterceptor;
+
+@Configuration
+public class FeignClientConfig {
+
+	@Bean
+	public RequestInterceptor authFeignRequestInterceptor() {
+	  return request -> {
+	    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+	    String header = (auth != null && auth.getCredentials() instanceof String t)
+	                      ? t.startsWith("Bearer ") ? t : "Bearer "+t
+	                      : null;
+	    if (header != null) {
+	      System.out.println(">>> Feign adding Authorization: " + header);
+	      request.header("Authorization", header);
+	    } else {
+	      System.out.println(">>> Feign found no credentials");
+	    }
+	  };
+	}
+
+}

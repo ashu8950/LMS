@@ -1,0 +1,14 @@
+package com.instructor_service.service;
+import com.lms.instructor.dto.InstructorDTO;
+import com.lms.instructor.dto.AssignmentRequest;
+import com.lms.instructor.entity.Instructor;
+
+import java.util.List;
+
+public interface InstructorService {
+    Instructor createInstructor(InstructorDTO dto);
+    List<Instructor> listInstructors();
+    Instructor getInstructor(Long id);
+    void deleteInstructor(Long id);
+    void assignToBatch(AssignmentRequest req);
+}

@@ -1,0 +1,64 @@
+package com.payment_service.service.impl;
+
+
+import com.razorpay.*;
+
+import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
+import java.util.HashMap;
+import java.util.Map;
+
+@Service
+@RequiredArgsConstructor
+public class PaymentServiceImpl implements PaymentService {
+
+    private final RazorpayClient razorpay;
+    private final PaymentRepository repo;
+
+    @Override
+    public CreateOrderResponse createOrder(CreateOrderRequest req) throws Exception {
+        Map<String, Object> options = new HashMap<>();
+        options.put("amount", req.getAmount());
+        options.put("currency", req.getCurrency());
+        options.put("receipt", req.getReceipt());
+        Order order = razorpay.Orders.create(options);
+
+        // save skeleton payment
+        repo.save(Payment.builder()
+            .orderId(Long.valueOf(order.get("id").toString()))
+            .amount(order.get("amount"))
+            .currency(order.get("currency"))
+            .status(order.get("status"))
+            .build()
+        );
+
+        return CreateOrderResponse.builder()
+            .orderId(order.get("id"))
+            .amount((Integer)order.get("amount"))
+            .currency(order.get("currency"))
+            .build();
+    }
+
+    @Override
+    public VerifyPaymentResponse verifyPayment(VerifyPaymentRequest req) throws Exception {
+        // verify signature
+        boolean isValid = Utils.verifyPaymentSignature(
+          Map.of("razorpay_order_id", req.getOrderId(),
+                 "razorpay_payment_id", req.getPaymentId()),
+          req.getSignature(),
+          razorpay.getKeySecret()
+        );
+
+        Payment payment = repo.findByOrderId(Long.valueOf(req.getOrderId()))
+            .orElseThrow(() -> new RuntimeException("Order not found"));
+        payment.setPaymentId(Long.valueOf(req.getPaymentId()));
+        payment.setSignature(req.getSignature());
+        payment.setStatus(isValid ? "captured" : "failed");
+        repo.save(payment);
+
+        return VerifyPaymentResponse.builder()
+            .valid(isValid)
+            .status(payment.getStatus())
+            .build();
+    }
+}

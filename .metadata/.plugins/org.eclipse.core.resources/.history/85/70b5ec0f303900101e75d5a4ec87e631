@@ -1,0 +1,15 @@
+package com.course_service.listener;
+
+
+import org.springframework.stereotype.Service;
+
+@Service
+@Slf4j
+public class CourseMessageListener {
+
+    @RabbitListener(queues = "${spring.rabbitmq.queue}")
+    public void receiveMessage(CourseDTO courseDTO) {
+        log.info("Received Course message from queue: {}", courseDTO);
+        // Handle message if needed
+    }
+}

@@ -1,0 +1,11 @@
+package com.scheduleservice.repository;
+
+import com.scheduleservice.entity.Schedule;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
+    List<Schedule> findByCourseId(Long courseId);
+    List<Schedule> findByBatchId(Long batchId);
+}

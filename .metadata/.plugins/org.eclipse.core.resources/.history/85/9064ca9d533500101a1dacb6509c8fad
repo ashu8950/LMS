@@ -1,0 +1,43 @@
+package com.auth_service.controllers;
+
+import com.auth_service.dto.*;
+import com.auth_service.service.AuthService;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/auth")
+public class AuthController {
+
+    @Autowired
+    private AuthService authService;
+
+    // 1. Send OTP
+    @PostMapping("/otp")
+    public ApiResponse<Void> generateOtp(@RequestBody OtpRequest request) {
+        authService.generateAndSendOtp(request.getEmail());
+        return new ApiResponse<>(true, "OTP sent to " + request.getEmail(), null);
+    }
+
+    // 2. Verify OTP
+    @PostMapping("/otp/verify")
+    public ApiResponse<Void> verifyOtp(@RequestBody OtpVerifyRequest request) {
+        boolean isValid = authService.verifyOtp(request.getEmail(), request.getOtp());
+        if (!isValid) {
+            return new ApiResponse<>(false, "Invalid or expired OTP", null);
+        }
+        return new ApiResponse<>(true, "OTP verified successfully", null);
+    }
+
+    // 3. Register user
+    @PostMapping("/register")
+    public ApiResponse<AuthResponse> register(@RequestBody RegisterRequest request) {
+        try {
+            AuthResponse response = authService.register(request);
+            return new ApiResponse<>(true, "Registration successful", response);
+        } catch (Exception e) {
+            return new ApiResponse<>(false, e.getMessage(), null);
+        }
+    }
+}

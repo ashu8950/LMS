@@ -1,0 +1,29 @@
+package com.user_service.client;
+
+import feign.RequestInterceptor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+
+@Configuration
+public class AuthClientConfig {
+
+    @Bean
+    public RequestInterceptor requestInterceptor() {
+        return requestTemplate -> {
+            // Retrieve token from SecurityContextHolder (assumes OAuth2/JWT setup)
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            String token = null;
+            if (principal instanceof Jwt) {
+                token = ((Jwt) principal).getTokenValue();
+            }
+            if (token != null) {
+                requestTemplate.header("Authorization", "Bearer " + token);
+            } else {
+                // Log or handle missing token scenario
+                // e.g., throw new IllegalStateException("No JWT token found in SecurityContext");
+            }
+        };
+    }
+}

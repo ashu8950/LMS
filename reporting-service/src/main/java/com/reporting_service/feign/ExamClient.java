@@ -1,0 +1,16 @@
+package com.reporting_service.feign;
+
+
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import com.reporting_service.dto.ExamResultDto;
+
+import java.util.List;
+
+@FeignClient(name = "exam-service")
+public interface ExamClient {
+    @GetMapping("/exam/results")
+    List<ExamResultDto> getResultsForStudent(@RequestParam("studentId") Long studentId);
+}

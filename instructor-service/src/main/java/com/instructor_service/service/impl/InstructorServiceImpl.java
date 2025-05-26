@@ -1,0 +1,74 @@
+package com.instructor_service.service.impl;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.instructor_service.dto.AssignmentRequest;
+import com.instructor_service.dto.InstructorDTO;
+import com.instructor_service.dto.NotificationRequest;
+import com.instructor_service.entity.Instructor;
+import com.instructor_service.exception.InstructorNotFoundException;
+import com.instructor_service.feign.NotificationClient;
+import com.instructor_service.nessaging.AssignmentPublisher;
+import com.instructor_service.repository.InstructorRepository;
+import com.instructor_service.service.InstructorService;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class InstructorServiceImpl implements InstructorService {
+
+    private final InstructorRepository repo;
+    private final AssignmentPublisher publisher;
+    private final NotificationClient notificationClient;
+
+    @Override
+    public Instructor createInstructor(InstructorDTO dto) {
+        if (repo.existsByEmail(dto.getEmail())) {
+            throw new IllegalArgumentException("Email already in use");
+        }
+        Instructor inst = new Instructor();
+        inst.setFirstName(dto.getFirstName());
+        inst.setLastName(dto.getLastName());
+        inst.setEmail(dto.getEmail());
+        inst.setPhone(dto.getPhone());
+        return repo.save(inst);
+    }
+
+    @Override
+    public List<Instructor> listInstructors() {
+        return repo.findAll();
+    }
+
+    @Override
+    public Instructor getInstructor(Long id) {
+        return repo.findById(id)
+            .orElseThrow(() -> new InstructorNotFoundException("Instructor not found: " + id));
+    }
+
+    @Override
+    public void deleteInstructor(Long id) {
+        if (!repo.existsById(id)) {
+            throw new InstructorNotFoundException("Instructor not found: " + id);
+        }
+        repo.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public void assignToBatch(AssignmentRequest req) {
+        // verify instructor
+        if (!repo.existsById(req.getInstructorId())) {
+            throw new InstructorNotFoundException("Instructor not found: " + req.getInstructorId());
+        }
+        publisher.publishAssignment(req);
+        // optional: notify instructor
+        notificationClient.sendEmail(new NotificationRequest(
+            getInstructor(req.getInstructorId()).getEmail(),
+            "You have a new batch assignment",
+            "You have been assigned to batch ID: " + req.getBatchId()
+        ));
+    }
+}

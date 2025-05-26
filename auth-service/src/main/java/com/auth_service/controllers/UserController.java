@@ -1,0 +1,77 @@
+package com.auth_service.controllers;
+
+import com.auth_service.dto.AuthUserDTO;
+import com.auth_service.entity.User;
+import com.auth_service.enums.Role;
+import com.auth_service.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping("/api/users")
+@RequiredArgsConstructor
+public class UserController {
+
+    private final UserRepository userRepository;
+
+    @GetMapping("/{id}")
+    public ResponseEntity<AuthUserDTO> getUserById(@PathVariable Long id) {
+        User user = userRepository.findById(id).orElse(null);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        AuthUserDTO dto = new AuthUserDTO(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getRole().name()
+        );
+        return ResponseEntity.ok(dto);
+    }
+
+    @GetMapping
+    //@PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<List<AuthUserDTO>> getAllUsers() {
+        List<AuthUserDTO> users = userRepository.findAll()
+                .stream()
+                .map(user -> new AuthUserDTO(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getEmail(),
+                        user.getRole().name()
+                ))
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/role/{role}")
+   // @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<List<AuthUserDTO>> getUsersByRole(@PathVariable String role) {
+        Role roleEnum;
+        try {
+            roleEnum = Role.valueOf(role.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(null); // invalid enum value
+        }
+
+        List<AuthUserDTO> users = userRepository.findAllByRole(roleEnum)
+                .stream()
+                .map(user -> new AuthUserDTO(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getEmail(),
+                        user.getRole().name()
+                ))
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(users);
+    }
+
+}

@@ -1,0 +1,46 @@
+package com.auth_service.controllers;
+
+import com.auth_service.dto.*;
+import com.auth_service.service.AuthService;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/auth")
+@RequiredArgsConstructor
+public class AuthController {
+
+    private final AuthService authService;
+
+    // 1. Send OTP
+    @PostMapping("/otp")
+    public ResponseEntity<ApiResponse<Void>> generateOtp(@RequestBody OtpRequest request) {
+        authService.generateAndSendOtp(request.getEmail());
+        ApiResponse<Void> body = new ApiResponse<>(true, "OTP sent to " + request.getEmail(), null);
+        return ResponseEntity.status(HttpStatus.OK).body(body);
+    }
+
+    // 2. Verify OTP
+    @PostMapping("/otp/verify")
+    public ResponseEntity<ApiResponse<Void>> verifyOtp(@RequestBody OtpVerifyRequest request) {
+        boolean isValid = authService.verifyOtp(request.getEmail(), request.getOtp());
+        if (!isValid) {
+            ApiResponse<Void> body = new ApiResponse<>(false, "Invalid or expired OTP", null);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+        }
+        ApiResponse<Void> body = new ApiResponse<>(true, "OTP verified successfully", null);
+        return ResponseEntity.status(HttpStatus.OK).body(body);
+    }
+
+    // 3. Register user
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<AuthResponse>> register(@RequestBody RegisterRequest request) {
+        AuthResponse authResponse = authService.register(request);
+        ApiResponse<AuthResponse> body = new ApiResponse<>(true, "Registration successful", authResponse);
+        // 201 Created because we’ve created a new user
+        return ResponseEntity.status(HttpStatus.CREATED).body(body);
+    }
+}

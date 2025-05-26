@@ -1,0 +1,6 @@
+package com.example.reporting.dto;
+public class StudentDto {
+    private Long id;
+    private String name;
+    // getters/setters
+}

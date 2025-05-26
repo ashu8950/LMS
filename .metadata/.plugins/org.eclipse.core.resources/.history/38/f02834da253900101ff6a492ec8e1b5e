@@ -1,0 +1,8 @@
+package com.student_service.feign_client;
+
+@FeignClient(name = "course-service")
+public interface CourseClient {
+    @GetMapping("/courses/{id}")
+    CourseDTO getCourseById(@PathVariable Long id);
+}
+

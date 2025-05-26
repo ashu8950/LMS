@@ -1,0 +1,6 @@
+package com.admin_service.feign;
+@FeignClient(name = "course-service")
+public interface CourseClient {
+    @PostMapping("/course/")
+    ResponseEntity<?> createCourse(@RequestBody CourseDto dto);
+}

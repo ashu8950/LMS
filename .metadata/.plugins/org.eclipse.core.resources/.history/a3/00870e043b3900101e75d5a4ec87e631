@@ -1,0 +1,8 @@
+// service/PaymentService.java
+package com.payment_service.service;
+
+import com.paymentservice.dto.*;
+public interface PaymentService {
+    CreateOrderResponse createOrder(CreateOrderRequest req) throws Exception;
+    VerifyPaymentResponse verifyPayment(VerifyPaymentRequest req) throws Exception;
+}

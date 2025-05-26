@@ -1,0 +1,34 @@
+package com.user_service.service.impl;
+
+import org.springframework.stereotype.Service;
+
+import com.user_service.dto.UserDTO;
+import com.user_service.entity.User;
+import com.user_service.repository.UserRepository;
+import com.user_service.service.UserService;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class UserServiceImpl implements UserService {
+
+    private final UserRepository userRepository;
+
+    @Override
+    public UserDTO getUserById(Long id) {
+        User user = userRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // map User entity to UserDTO
+        UserDTO dto = new UserDTO();
+        dto.setId(user.getId());
+        dto.setUsername(user.getUsername());
+        dto.setEmail(user.getEmail());
+        dto.setRole(user.getRole());
+        dto.setFirstName(user.getFirstName());
+        dto.setLastName(user.getLastName());
+        dto.setPhone(user.getPhone());
+        return dto;
+    }
+}

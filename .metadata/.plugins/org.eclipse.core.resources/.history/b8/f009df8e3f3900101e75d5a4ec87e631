@@ -1,0 +1,9 @@
+package com.reporting_service.dto;
+
+import java.util.List;
+
+public class ReportResponse<T> {
+    private T meta;
+    private List<?> details;
+    // getters/setters, constructors
+}

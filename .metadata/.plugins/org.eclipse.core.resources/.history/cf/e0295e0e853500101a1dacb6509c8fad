@@ -1,0 +1,55 @@
+package com.auth_service.service;
+
+import java.time.Duration;
+
+import com.auth_service.dto.RegisterRequest;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class OtpService {
+
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    private static final Duration TTL = Duration.ofMinutes(5);
+    private static final String OTP_EMAIL_KEY_PREFIX = "otp:";          // otp:<email>
+    private static final String OTP_CODE_KEY_PREFIX = "otp_code:";      // otp_code:<otp>
+    private static final String REGISTRATION_KEY_PREFIX = "reg:";       // reg:<email>
+
+    public void saveOtp(String email, String otp) {
+        redisTemplate.opsForValue().set(OTP_EMAIL_KEY_PREFIX + email, otp, TTL);
+        redisTemplate.opsForValue().set(OTP_CODE_KEY_PREFIX + otp, email, TTL);
+    }
+
+    public String getOtp(String email) {
+        Object otp = redisTemplate.opsForValue().get(OTP_EMAIL_KEY_PREFIX + email);
+        return otp != null ? otp.toString() : null;
+    }
+
+    public String getEmailByOtp(String otp) {
+        Object email = redisTemplate.opsForValue().get(OTP_CODE_KEY_PREFIX + otp);
+        return email != null ? email.toString() : null;
+    }
+
+    public void deleteOtp(String email, String otp) {
+        redisTemplate.delete(OTP_EMAIL_KEY_PREFIX + email);
+        redisTemplate.delete(OTP_CODE_KEY_PREFIX + otp);
+    }
+
+    public void saveRegistrationData(String email, RegisterRequest req) {
+        redisTemplate.opsForValue().set(REGISTRATION_KEY_PREFIX + email, req, TTL);
+    }
+
+    public RegisterRequest getRegistrationData(String email) {
+        Object data = redisTemplate.opsForValue().get(REGISTRATION_KEY_PREFIX + email);
+        return data != null ? (RegisterRequest) data : null;
+    }
+
+    public void deleteRegistrationData(String email) {
+        redisTemplate.delete(REGISTRATION_KEY_PREFIX + email);
+    }
+}

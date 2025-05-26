@@ -1,0 +1,92 @@
+package com.auth_service.config;
+
+import java.security.Key;
+import java.util.Date;
+import java.util.List;
+import java.util.function.Function;
+
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Component;
+
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
+
+@Component
+public class JwtTokenProvider {
+
+    private static final String SECRET_KEY = "my-secret-key-that-is-long-enough-to-meet-the-length-requirement";
+    private static final long EXPIRATION_TIME_MS = 86400000L; // 24 hours
+
+    private final Key signingKey;
+
+    public JwtTokenProvider() {
+        this.signingKey = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+    }
+
+    // Generate JWT token
+    public String generateToken(UserDetails userDetails) {
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+
+        return Jwts.builder()
+                .setSubject(userDetails.getUsername())
+                .claim("roles", roles)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME_MS))
+                .signWith(signingKey, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    // Validate JWT token
+    public boolean validateToken(String token) {
+        try {
+            parseClaims(token);
+            return true;
+        } catch (ExpiredJwtException ex) {
+            System.out.println("JWT expired: " + ex.getMessage());
+        } catch (JwtException ex) {
+            System.out.println("Invalid JWT: " + ex.getMessage());
+        }
+        return false;
+    }
+
+    // Extract username
+    public String getUsernameFromToken(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    // Extract roles
+    @SuppressWarnings("unchecked")
+    public List<String> getRolesFromToken(String token) {
+        return extractClaim(token, claims -> claims.get("roles", List.class));
+    }
+
+    // Generic claim extractor
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = parseClaims(token);
+        return claimsResolver.apply(claims);
+    }
+
+    // Parse JWT claims
+    private Claims parseClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(signingKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+    public String generateRefreshToken(UserDetails userDetails) {
+        long refreshExpirationMs = 7 * 24 * 60 * 60 * 1000L; // 7 days
+
+        return Jwts.builder()
+                .setSubject(userDetails.getUsername())
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + refreshExpirationMs))
+                .signWith(signingKey, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+}

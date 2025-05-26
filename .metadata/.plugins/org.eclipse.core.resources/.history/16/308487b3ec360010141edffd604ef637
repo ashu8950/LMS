@@ -1,0 +1,42 @@
+spring.application.name=auth-service
+server.port=8081
+
+eureka.client.service-url.defaultZone:http://localhost:8761/eureka/
+eureka.client.register-with-eureka=true
+eureka.client.fetch-registry=true
+
+
+#for debug security
+logging.level.org.springframework.security=DEBUG
+
+# Redis config
+spring.data.redis.host=localhost
+spring.data.redis.port=6379
+
+# RabbitMQ config
+spring.rabbitmq.host=localhost
+spring.rabbitmq.port=5672
+spring.rabbitmq.username=guest
+spring.rabbitmq.password=guest
+
+
+# Mail Configuration
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=shabsingh961@gmail.com
+spring.mail.password=wzrojfyvwpzolzhy
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.protocol=smtp
+
+
+# === MySQL DB Connection ===
+spring.datasource.url=jdbc:mysql://localhost:3306/auth_db
+spring.datasource.username=root
+spring.datasource.password=ashu
+
+# === Hibernate / JPA Config ===
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
