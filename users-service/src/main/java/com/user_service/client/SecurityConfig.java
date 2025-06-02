@@ -2,45 +2,23 @@ package com.user_service.client;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 
-import javax.crypto.spec.SecretKeySpec;
-
 @Configuration
-@EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
-
-    private static final String SECRET_KEY = "my-secret-key-that-is-long-enough-to-meet-the-length-requirement";
-
-    @Bean
-    public JwtDecoder jwtDecoder() {
-        byte[] keyBytes = SECRET_KEY.getBytes();
-        SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
-        return NimbusJwtDecoder.withSecretKey(secretKey).build();
-    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // we’re stateless and using JWTs
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(sess -> sess
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
+            .csrf(csrf -> csrf.disable())  // ✅ Disable CSRF for stateless REST
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/public/**","/users/**").permitAll()
-                // this must come *before* the more general /api/profiles/** matcher
-                .requestMatchers("/api/profiles/role/**").hasAuthority("ADMIN")
-                .requestMatchers("/api/profiles/**").permitAll()
-                .anyRequest().authenticated()
-            )
-            .oauth2ResourceServer(oauth2 -> oauth2.jwt());
+                .anyRequest().permitAll()
+            );
 
         return http.build();
     }

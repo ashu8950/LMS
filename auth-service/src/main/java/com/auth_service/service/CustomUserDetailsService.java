@@ -3,7 +3,6 @@ package com.auth_service.service;
 import com.auth_service.entity.User;
 import com.auth_service.repository.UserRepository;
 import com.auth_service.security.CustomUserDetails;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.*;
@@ -30,6 +29,4 @@ public class CustomUserDetailsService implements UserDetailsService {
             Collections.singletonList(new SimpleGrantedAuthority(user.getRole().name()))
         );
     }
-
-    
 }

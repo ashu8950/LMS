@@ -1,9 +1,0 @@
-package com.notification_service.service;
-
-
-
-
-
-public interface NotificationService {
-    void sendHtmlEmail(NotificationRequest request);
-}

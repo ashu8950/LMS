@@ -1,7 +1,0 @@
-package com.student_service.feign_client;
-
-@FeignClient(name = "notification-service")
-public interface NotificationClient {
-    @PostMapping("/notify/email")
-    void sendEmail(@RequestBody NotificationRequest request);
-}

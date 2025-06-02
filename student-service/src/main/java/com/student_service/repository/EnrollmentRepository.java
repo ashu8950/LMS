@@ -9,5 +9,6 @@ import com.student_service.entity.Enrollment;
 
 @Repository
 public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
-    List<Enrollment> findByStudentId(Long studentId);
+	List<Enrollment> findByStudentUserId(Long userId);
+
 }

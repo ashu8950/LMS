@@ -1,5 +1,0 @@
-package com.student_service.feign_client;
-
-public interface Notification {
-
-}

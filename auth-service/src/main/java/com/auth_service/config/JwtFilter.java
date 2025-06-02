@@ -1,81 +1,97 @@
 package com.auth_service.config;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import com.auth_service.service.CustomUserDetailsService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.auth_service.service.CustomUserDetailsService;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.ws.rs.core.HttpHeaders;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
+    private final CustomUserDetailsService userDetailsService;
 
-    @Autowired
-    private CustomUserDetailsService userDetailsService;
-    
- // 1) Skip filtering for our public paths
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    public JwtFilter(CustomUserDetailsService userDetailsService) {
+        this.userDetailsService = userDetailsService;
+    }
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.equals("/auth") || path.startsWith("/auth/");
+        // Skip only truly public auth endpoints
+        return path.equals("/auth/login")
+            || path.equals("/auth/register")
+            || path.equals("/auth/verify-otp")
+            || path.equals("/auth/refresh")
+            || path.equals("/auth/forgot-password")
+            || path.equals("/auth/reset-password")
+            || path.equals("/auth/logout");
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain)
-                                    throws ServletException, IOException {
+            throws ServletException, IOException {
 
-        final String authHeader = request.getHeader("Authorization");
-
-        String email = null;
-        String token = null;
-
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            token = authHeader.substring(7);
-            try {
-                email = jwtTokenProvider.getUsernameFromToken(token);
-            } catch (Exception e) {
-                // Consider using a logger instead of System.out
-                System.out.println("Invalid token: " + e.getMessage());
-            }
+        String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
         }
 
-        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        try {
+            String token = authHeader.substring(7);
+            byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+            Claims claims = Jwts.parserBuilder()
+                                .setSigningKey(Keys.hmacShaKeyFor(keyBytes))
+                                .build()
+                                .parseClaimsJws(token)
+                                .getBody();
+
+            String email = claims.getSubject();
+            Integer userIdClaim = claims.get("userId", Integer.class);
+            @SuppressWarnings("unchecked")
+            List<String> roles = claims.get("roles", List.class);
+
+            // Load user details (you may choose to ignore DB lookup and create custom details with claims)
             UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-            if (jwtTokenProvider.validateToken(token)) {
-                List<String> roles = jwtTokenProvider.getRolesFromToken(token);
-                if (roles == null) {
-                    roles = Collections.emptyList();
-                }
+            var authorities = roles.stream()
+                                   .map(SimpleGrantedAuthority::new)
+                                   .collect(Collectors.toList());
 
-                // Map roles directly as authorities without "ROLE_" prefix
-                List<SimpleGrantedAuthority> authorities = roles.stream()
-                    .map(SimpleGrantedAuthority::new)
-                    .toList();
+            // Build authentication token, include userId in details if needed
+            var authToken = new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                authorities);
+            authToken.setDetails(userIdClaim); // store userId as detail
 
-                UsernamePasswordAuthenticationToken authToken =
-                    new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
-
-                SecurityContextHolder.getContext().setAuthentication(authToken);
-            }
+            SecurityContextHolder.getContext().setAuthentication(authToken);
+        } catch (Exception ex) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
         }
 
         filterChain.doFilter(request, response);

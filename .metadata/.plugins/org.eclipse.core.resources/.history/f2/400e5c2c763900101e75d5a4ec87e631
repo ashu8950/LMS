@@ -1,6 +1,0 @@
-package com.user_service.service;
-
-
-public interface UserService {
-    UserDTO getUserById(Long id);
-}

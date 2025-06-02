@@ -1,9 +1,0 @@
-package com.student_service.dto;
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class EnrollmentRequest {
-    private Long batchId;
-    private Long courseId;
-}

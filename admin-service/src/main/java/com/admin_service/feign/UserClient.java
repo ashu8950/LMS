@@ -9,13 +9,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import com.admin_service.config.FeignClientConfig;
 import com.admin_service.dto.UserDto;
 
-@FeignClient(name = "user-service")
+@FeignClient(name = "users-service",configuration = FeignClientConfig.class)
 public interface UserClient {
-    @PostMapping("/user/")
-    ResponseEntity<?> createUser(@RequestBody UserDto userDto);
+   
 
-    @GetMapping("/user/role/{role}")
+    @GetMapping("/profiles/role/{role}")
     List<UserDto> getUsersByRole(@PathVariable("role") String role);
 }
+
+

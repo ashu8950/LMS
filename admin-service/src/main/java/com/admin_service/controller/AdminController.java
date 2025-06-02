@@ -8,10 +8,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.admin_service.dto.AuthDto;
 import com.admin_service.dto.BatchDto;
 import com.admin_service.dto.CourseDto;
 import com.admin_service.dto.InstructorAssignmentDto;
+import com.admin_service.dto.OtpDto;
 import com.admin_service.dto.UserDto;
+import com.admin_service.feign.AuthClient;
 import com.admin_service.feign.BatchClient;
 import com.admin_service.feign.CourseClient;
 import com.admin_service.feign.ReportingClient;
@@ -25,19 +28,26 @@ public class AdminController {
     private final BatchClient batchClient;
     private final CourseClient courseClient;
     private final ReportingClient reportingClient;
+    private final AuthClient authClient;
 
     public AdminController(UserClient userClient, BatchClient batchClient,
-                           CourseClient courseClient, ReportingClient reportingClient) {
+                           CourseClient courseClient, ReportingClient reportingClient,AuthClient authClient) {
         this.userClient = userClient;
         this.batchClient = batchClient;
         this.courseClient = courseClient;
         this.reportingClient = reportingClient;
+        this.authClient = authClient;
     }
 
     // User Management
     @PostMapping("/user")
-    public ResponseEntity<?> createUser(@RequestBody UserDto userDto) {
-        return userClient.createUser(userDto);
+    public ResponseEntity<?> createUser(@RequestBody AuthDto authDto) {
+        return authClient.createUser(authDto);
+    }
+    
+    @PostMapping("/otp")
+    public ResponseEntity<?> verifyOtp(@RequestBody OtpDto otp) {
+        return authClient.verifyOtp(otp);
     }
 
     @GetMapping("/users/{role}")

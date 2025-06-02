@@ -5,7 +5,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-@FeignClient(name = "reporting-service")
+import com.admin_service.config.FeignClientConfig;
+
+@FeignClient(name = "reporting-service",configuration = FeignClientConfig.class)
 public interface ReportingClient {
     @GetMapping("/report/student/{id}")
     ResponseEntity<?> getStudentReport(@PathVariable Long id);

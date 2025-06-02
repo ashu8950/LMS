@@ -17,9 +17,29 @@ public class EmailTemplateBuilder {
              + "<p>Wishing you success in your learning journey!</p><p>– LMS Team</p>";
     }
 
+    public static String buildEnrollmentBodyWithNames(String firstName, Long courseId, String courseTitle, Long batchId, String batchName) {
+        return "<p>Hi " + firstName + ",</p>"
+             + "<p>Your enrollment has been confirmed:</p>"
+             + "<ul>"
+             + "<li>Course: " + courseTitle + " (ID: " + courseId + ")</li>"
+             + "<li>Batch: " + batchName + " (ID: " + batchId + ")</li>"
+             + "</ul>"
+             + "<p>Wishing you success in your learning journey!</p><p>– LMS Team</p>";
+    }
+
     public static String buildFeedbackBody(String name, LocalDate date) {
         return "<p>Hi " + name + ",</p>"
              + "<p>Thank you for your feedback submitted on " + date + ".</p>"
              + "<p>We truly appreciate your insights.</p><p>– LMS Team</p>";
+    }
+
+    public static String buildUpdateBody(String firstName, LocalDate updatedDate) {
+        return String.format(
+            "Dear %s,\n\nYour profile has been successfully updated in our Learning Management System on %s.\n\n"
+            + "If you did not make this change or have any concerns, please contact our support team.\n\n"
+            + "Best regards,\nLMS Team",
+            firstName,
+            updatedDate.toString()
+        );
     }
 }

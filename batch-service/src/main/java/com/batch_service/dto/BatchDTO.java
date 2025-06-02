@@ -8,7 +8,9 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class BatchDTO {
+
     private Long id;
     private String name;
     private String description;
+    private Long courseId;  
 }

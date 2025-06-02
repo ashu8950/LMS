@@ -28,6 +28,10 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
+	<dependency>
+  <groupId>com.fasterxml.jackson.core</groupId>
+  <artifactId>jackson-databind</artifactId>
+</dependency>
 
     <!-- Eureka Client -->
     <dependency>
@@ -53,11 +57,7 @@
       <artifactId>spring-cloud-starter-config</artifactId>
     </dependency>
 
-    <!-- Spring Security (optional for RBAC) -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-security</artifactId>
-    </dependency>
+    
 
     <!-- Lombok (optional, but useful for DTOs and boilerplate reduction) -->
     <dependency>

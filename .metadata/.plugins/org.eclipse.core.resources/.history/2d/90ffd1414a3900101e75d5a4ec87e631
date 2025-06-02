@@ -1,9 +1,0 @@
-package com.admin_service.feign;
-@FeignClient(name = "batch-service")
-public interface BatchClient {
-    @PostMapping("/batch/")
-    ResponseEntity<?> createBatch(@RequestBody BatchDto batchDto);
-
-    @PostMapping("/batch/{id}/assign-instructor")
-    ResponseEntity<?> assignInstructor(@PathVariable Long id, @RequestBody InstructorAssignmentDto dto);
-}

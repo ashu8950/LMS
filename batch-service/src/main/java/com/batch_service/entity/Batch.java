@@ -23,6 +23,9 @@ public class Batch {
 
     private String description;
 
+    @Column(nullable = false)
+    private Long courseId;  // Reference to Course in course_service
+
     private LocalDateTime createdAt;
 
     @PrePersist

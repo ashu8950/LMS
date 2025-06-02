@@ -10,7 +10,7 @@ import com.student_service.entity.Student;
 
 
 public interface StudentService {
-    Student registerStudent(StudentDTO dto);
+    Student registerStudent(StudentDTO dto) throws Exception;
     void enrollStudent(Long studentId, EnrollmentRequest req);
     List<CourseDTO> getEnrolledCourses(Long studentId);
     void sendFeedback(Long studentId, FeedbackDto feedback);

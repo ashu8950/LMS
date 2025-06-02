@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/users")
 @RequiredArgsConstructor
 public class UserController {
 
@@ -25,7 +25,6 @@ public class UserController {
         if (user == null) {
             return ResponseEntity.notFound().build();
         }
-
         AuthUserDTO dto = new AuthUserDTO(
                 user.getId(),
                 user.getUsername(),
@@ -36,7 +35,6 @@ public class UserController {
     }
 
     @GetMapping
-    //@PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<List<AuthUserDTO>> getAllUsers() {
         List<AuthUserDTO> users = userRepository.findAll()
                 .stream()
@@ -47,20 +45,17 @@ public class UserController {
                         user.getRole().name()
                 ))
                 .collect(Collectors.toList());
-
         return ResponseEntity.ok(users);
     }
 
     @GetMapping("/role/{role}")
-   // @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<List<AuthUserDTO>> getUsersByRole(@PathVariable String role) {
         Role roleEnum;
         try {
             roleEnum = Role.valueOf(role.toUpperCase());
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(null); // invalid enum value
+            return ResponseEntity.badRequest().body(null);
         }
-
         List<AuthUserDTO> users = userRepository.findAllByRole(roleEnum)
                 .stream()
                 .map(user -> new AuthUserDTO(
@@ -70,8 +65,6 @@ public class UserController {
                         user.getRole().name()
                 ))
                 .collect(Collectors.toList());
-
         return ResponseEntity.ok(users);
     }
-
 }

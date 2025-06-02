@@ -1,28 +1,22 @@
 package com.user_service.client;
 
-import com.user_service.config.FeignClientInterceptorConfig;
 import com.user_service.dto.AuthUserDTO;
-
-
-import java.util.List;
-
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 
-@FeignClient(
-    name = "auth-service",
-    url = "http://localhost:8081",
-    configuration = FeignClientInterceptorConfig.class
-)
+import java.util.List;
+
+@FeignClient(name = "auth-service")
 public interface AuthServiceClient {
 
-    @GetMapping("/api/users/{id}")
-    AuthUserDTO getUserById(@PathVariable("id") Long userId);
-    
-    @GetMapping("/api/users")
+    @GetMapping("/users/{id}")
+    AuthUserDTO getUserById(@PathVariable("id") Long id);
+
+    @GetMapping("/users")
     List<AuthUserDTO> getAllUsers();
 
-    @GetMapping("/api/users/role/{role}")
+    @GetMapping("/users/role/{role}")
     List<AuthUserDTO> getUsersByRole(@PathVariable("role") String role);
 }

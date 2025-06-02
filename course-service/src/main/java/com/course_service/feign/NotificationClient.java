@@ -8,9 +8,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 
 import com.course_service.dto.NotificationRequest;
 
-@FeignClient(name = "notification-service",url = "http://localhost:6060")
+@FeignClient(name = "notification-service")
 public interface NotificationClient {
 
-    @PostMapping("/api/notifications/send")
+    @PostMapping("/notifications/send")
     void sendNotification(NotificationRequest request);
 }

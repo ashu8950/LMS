@@ -4,10 +4,11 @@ import com.user_service.client.AuthServiceClient;
 import com.user_service.dto.AuthUserDTO;
 import com.user_service.dto.UserProfileDTO;
 import com.user_service.service.UserProfileService;
+import com.user_service.util.RequestHeaderContext;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -16,60 +17,94 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/profiles")
+@RequestMapping("/profiles")
 @RequiredArgsConstructor
 public class UserProfileController {
 
     private final UserProfileService userProfileService;
+    private final AuthServiceClient authServiceClient;
+    private final RequestHeaderContext requestHeaderContext;
 
-    // Create a new user profile (user can create only their own)
+    
+    private boolean isOwnerOrRole(HttpServletRequest request, Long userId, String email, String role) {
+        String requesterId = requestHeaderContext.getUserId(request);
+        String requesterEmail = requestHeaderContext.getUserEmail(request);
+        boolean hasRole = requestHeaderContext.hasRole(request, role);
+        boolean isOwnerById = userId != null && String.valueOf(userId).equals(requesterId);
+        boolean isOwnerByEmail = email != null && email.equalsIgnoreCase(requesterEmail);
+        return hasRole || isOwnerById || isOwnerByEmail;
+    }
+
     @PostMapping
-    @PreAuthorize("#dto.email == authentication.principal.email or hasAuthority('ADMIN')")
-    public ResponseEntity<UserProfileDTO> createProfile(@Valid @RequestBody UserProfileDTO dto) {
+    public ResponseEntity<UserProfileDTO> createProfile(HttpServletRequest request,
+                                                        @Valid @RequestBody UserProfileDTO dto) {
+        // Allow if ADMIN or the user themselves by ID or email
+        if (!isOwnerOrRole(request, dto.getUserId(), dto.getEmail(), "ADMIN")) {
+            return ResponseEntity.status(403).build();
+        }
+        // Optionally validate existence in auth-service
+        AuthUserDTO user = authServiceClient.getUserById(dto.getUserId());
+        if (user == null || !user.getEmail().equalsIgnoreCase(dto.getEmail())) {
+            return ResponseEntity.badRequest().build();
+        }
         UserProfileDTO createdProfile = userProfileService.createUserProfile(dto);
         return ResponseEntity.status(201).body(createdProfile);
     }
 
-    // Update existing profile (user can update only their own)
     @PutMapping("/{userId}")
-    @PreAuthorize("#userId == authentication.principal.userId or hasAuthority('ADMIN')")
-    public ResponseEntity<UserProfileDTO> updateProfile(@PathVariable Long userId,
+    public ResponseEntity<UserProfileDTO> updateProfile(HttpServletRequest request,
+                                                        @PathVariable Long userId,
                                                         @Valid @RequestBody UserProfileDTO dto) {
-        dto.setUserId(userId); // ensure consistency between path and body
+        // Allow if ADMIN or the user themselves
+        if (!isOwnerOrRole(request, userId, dto.getEmail(), "ADMIN")) {
+            return ResponseEntity.status(403).build();
+        }
+        dto.setUserId(userId);
         UserProfileDTO updatedProfile = userProfileService.updateUserProfile(dto);
         return ResponseEntity.ok(updatedProfile);
     }
 
-    // Get profile by user ID (user can fetch only their own or authorized roles)
     @GetMapping("/{userId}")
-    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('INSTRUCTOR') or #userId == authentication.principal.userId")
-    public ResponseEntity<UserProfileDTO> getProfile(@PathVariable Long userId) {
+    public ResponseEntity<UserProfileDTO> getProfile(HttpServletRequest request,
+                                                     @PathVariable Long userId) {
+        // Allow if ADMIN, INSTRUCTOR, or the user by ID
+        boolean allowed = requestHeaderContext.hasRole(request, "ADMIN") ||
+                          requestHeaderContext.hasRole(request, "INSTRUCTOR") ||
+                          userId.equals(Long.valueOf(requestHeaderContext.getUserId(request)));
+        if (!allowed) {
+            return ResponseEntity.status(403).build();
+        }
         Optional<UserProfileDTO> profile = userProfileService.getUserProfile(userId);
         return profile.map(ResponseEntity::ok)
                       .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    //Delete profile by user ID (user can delete only their own)
     @DeleteMapping("/{userId}")
-    @PreAuthorize("#userId == authentication.principal.userId or hasAuthority('ADMIN')")
-    public ResponseEntity<Void> deleteProfile(@PathVariable Long userId) {
+    public ResponseEntity<Void> deleteProfile(HttpServletRequest request,
+                                              @PathVariable Long userId) {
+        if (!isOwnerOrRole(request, userId, null, "ADMIN")) {
+            return ResponseEntity.status(403).build();
+        }
         userProfileService.deleteUserProfile(userId);
         return ResponseEntity.noContent().build();
     }
 
-    // Admin only: Get all user profiles
     @GetMapping
-   @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<List<UserProfileDTO>> getAllProfiles() {
+    public ResponseEntity<List<UserProfileDTO>> getAllProfiles(HttpServletRequest request) {
+        if (!requestHeaderContext.hasRole(request, "ADMIN")) {
+            return ResponseEntity.status(403).build();
+        }
         List<UserProfileDTO> profiles = userProfileService.getAllUserProfiles();
         return ResponseEntity.ok(profiles);
     }
 
-    // Upload profile photo for a user (user or admin can upload)
     @PostMapping("/{userId}/photo")
-    @PreAuthorize("#userId == authentication.principal.userId or hasAuthority('ADMIN')")
-    public ResponseEntity<String> uploadPhoto(@PathVariable Long userId,
+    public ResponseEntity<String> uploadPhoto(HttpServletRequest request,
+                                              @PathVariable Long userId,
                                               @RequestParam("file") MultipartFile file) {
+        if (!isOwnerOrRole(request, userId, null, "ADMIN")) {
+            return ResponseEntity.status(403).build();
+        }
         try {
             String filename = userProfileService.storePhoto(userId, file);
             return ResponseEntity.ok("Photo uploaded successfully: " + filename);
@@ -79,25 +114,14 @@ public class UserProfileController {
         }
     }
 
-    // Admin only: Get profiles filtered by role
-//    @GetMapping("/role/{role}")
-//   @PreAuthorize("hasAuthority('ADMIN')")
-//    public ResponseEntity<List<UserProfileDTO>> getProfilesByRole(@PathVariable String role) {
-//        List<UserProfileDTO> profiles = userProfileService.getProfilesByRole(role.toUpperCase());
-//        return ResponseEntity.ok(profiles);
-//    }
-    
- // Admin only: Get profiles filtered by role
-    AuthServiceClient authServiceClient ;
     @GetMapping("/role/{role}")
-    @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<List<AuthUserDTO>> getProfilesByRole(@PathVariable String role) {
-        List<AuthUserDTO> profiles = authServiceClient.getUsersByRole(role.toUpperCase());
+    public ResponseEntity<List<UserProfileDTO>> getProfilesByRole(HttpServletRequest request,
+                                                                  @PathVariable String role) {
+        // only admins
+        if (!requestHeaderContext.hasRole(request, "ADMIN")) {
+            return ResponseEntity.status(403).build();
+        }
+        List<UserProfileDTO> profiles = userProfileService.getProfilesByRole(role);
         return ResponseEntity.ok(profiles);
-    }
-    
-    @GetMapping("/name")
-    public String name() {
-    	return "Ashu";
     }
 }
