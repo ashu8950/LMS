@@ -1,5 +1,7 @@
 package com.auth_service.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -15,12 +17,27 @@ public class RedisConfig {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
 
-        // Set key serializer as String
-        template.setKeySerializer(new StringRedisSerializer());
+        // Configure ObjectMapper with type information for proper deserialization
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.activateDefaultTyping(
+            BasicPolymorphicTypeValidator.builder()
+                .allowIfBaseType(Object.class)
+                .build(),
+            ObjectMapper.DefaultTyping.NON_FINAL
+        );
 
-        // Set value serializer as JSON for complex object support
-        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(mapper);
+        StringRedisSerializer stringSerializer = new StringRedisSerializer();
 
+        // Set key serializers as String
+        template.setKeySerializer(stringSerializer);
+        template.setHashKeySerializer(stringSerializer);
+
+        // Set value serializers with configured ObjectMapper
+        template.setValueSerializer(serializer);
+        template.setHashValueSerializer(serializer);
+
+        template.afterPropertiesSet();
         return template;
     }
 }

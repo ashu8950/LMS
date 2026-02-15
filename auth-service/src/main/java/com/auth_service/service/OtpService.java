@@ -3,6 +3,7 @@ package com.auth_service.service;
 import java.time.Duration;
 
 import com.auth_service.dto.RegisterRequest;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -44,6 +45,7 @@ public class OtpService {
     // Save registration data keyed by email
     public void saveRegistrationData(String email, RegisterRequest req) {
         if (email != null && req != null) {
+            log.info("Saving registration data for email: {}, username: {}", email, req.getUserName());
             redisTemplate.opsForValue().set(REGISTRATION_KEY_PREFIX + email, req, TTL);
         }
     }
@@ -52,7 +54,31 @@ public class OtpService {
     public RegisterRequest getRegistrationData(String email) {
         if (email == null) return null;
         Object data = redisTemplate.opsForValue().get(REGISTRATION_KEY_PREFIX + email);
-        return data != null ? (RegisterRequest) data : null;
+
+        if (data == null) {
+            log.warn("No registration data found for email: {}", email);
+            return null;
+        }
+
+        try {
+            if (data instanceof RegisterRequest) {
+                RegisterRequest req = (RegisterRequest) data;
+                log.info("Successfully retrieved registration data for email: {}. Username: {}", email, req.getUserName());
+                return req;
+            } else {
+                // Handle case where Redis returns a LinkedHashMap or other type
+                log.warn("Registration data is not RegisterRequest type but: {}. Attempting conversion.", data.getClass().getSimpleName());
+
+                ObjectMapper mapper = new ObjectMapper();
+                RegisterRequest req = mapper.convertValue(data, RegisterRequest.class);
+                log.info("Successfully converted registration data for email: {}. Username: {}", email, req.getUserName());
+                return req;
+            }
+        } catch (Exception e) {
+            log.error("Error retrieving/converting registration data for email: {}. Data type: {}", email,
+                data.getClass().getSimpleName(), e);
+            return null;
+        }
     }
 
     // Delete registration data by email

@@ -74,8 +74,22 @@ public class AuthService {
         otpService.deleteOtp(otp);
         RegisterRequest savedReq = otpService.getRegistrationData(email);
         if (savedReq == null) {
+            log.error("No pending registration found for email: {}", email);
             throw new IllegalStateException("No pending registration for " + email);
         }
+
+        log.info("Registration data retrieved for email: {}. Username: '{}', Password length: {}, Role: {}",
+                 email,
+                 savedReq.getUserName(),
+                 savedReq.getPassword() != null ? savedReq.getPassword().length() : 0,
+                 savedReq.getRole());
+
+        // Validate that username is not null or empty
+        if (savedReq.getUserName() == null || savedReq.getUserName().trim().isEmpty()) {
+            log.error("Username is null or empty in registration data for email: {}", email);
+            throw new IllegalStateException("Username is missing from registration data");
+        }
+
         otpService.deleteRegistrationData(email);
 
         if (userRepository.existsByEmail(email)) {
@@ -88,7 +102,18 @@ public class AuthService {
         user.setRole(savedReq.getRole());
         user.setUsername(savedReq.getUserName());
         user.setEnabled(true);
-        userRepository.save(user);
+
+        log.info("About to save user with username: '{}', email: '{}', role: {}",
+                 user.getUsername(), user.getEmail(), user.getRole());
+
+        try {
+            userRepository.save(user);
+            log.info("User successfully saved with ID: {}, username: '{}'", user.getId(), user.getUsername());
+        } catch (Exception e) {
+            log.error("Failed to save user. Username: '{}', Email: '{}'. Error: {}",
+                     user.getUsername(), user.getEmail(), e.getMessage(), e);
+            throw e;
+        }
 
         AuthResponse response = authenticateAndBuildResponse(user, savedReq.getPassword());
         rabbitMQSender.sendWelcomeMessage(email, savedReq.getUserName());
